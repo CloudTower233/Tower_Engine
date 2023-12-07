@@ -159,6 +159,12 @@
     <ClCompile Include="Vertex.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="TestPlane.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="TransformCbufDoubleboi.cpp">
+      <Filter>源文件\Bindable</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WindowsMessageMap.h">
@@ -308,6 +314,15 @@
     <ClInclude Include="Mesh.h">
       <Filter>头文件\Model</Filter>
     </ClInclude>
+    <ClInclude Include="Plane.h">
+      <Filter>头文件\Geoemtry</Filter>
+    </ClInclude>
+    <ClInclude Include="TestPlane.h">
+      <Filter>头文件\Drawable</Filter>
+    </ClInclude>
+    <ClInclude Include="TransformCbufDoubleboi.h">
+      <Filter>头文件\Bindable</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Tower_Engine.rc">
@@ -374,6 +389,9 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="PhongPSSpecMap.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="PhongPSNormalMap.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
   </ItemGroup>

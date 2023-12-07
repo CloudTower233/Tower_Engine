@@ -14,8 +14,10 @@ GDIPlusManager gdipm;
 App::App()
 	:
 	wnd(1280, 720, "Tower Engine"),
-	light(wnd.Gfx())
+	light(wnd.Gfx()),
+	plane(wnd.Gfx(),3.0f)
 {
+	plane.SetPos({ 1.0f,17.0f,-1.0f });
 	wnd.Gfx().SetProjection(dx::XMMatrixPerspectiveLH(1.0f, 9.0f / 16.0f, 0.5f, 40.0f));
 }
 
@@ -30,6 +32,7 @@ void App::DoFrame()
 	nano.Draw(wnd.Gfx());
 	nano2.Draw(wnd.Gfx());
 	light.Draw(wnd.Gfx());
+	plane.Draw(wnd.Gfx());
 
 	while (const auto e = wnd.kbd.ReadKey())
 	{
@@ -100,6 +103,7 @@ void App::DoFrame()
 	ShowImguiDemoWindow();
 	nano.ShowWindow("Model 1");
 	nano2.ShowWindow("Model 2");
+	plane.SpawnControlWindow(wnd.Gfx());
 
 	// present
 	wnd.Gfx().EndFrame();
