@@ -1,17 +1,17 @@
-#include "TestPlane.h"
-#include "Plane.h"
-#include "BIndableCommon.h"
-#include "imgui/imgui.h"
+#include "TestCube.h"
+#include "Cube.h"
+#include "BindableCommon.h"
 #include "TransformCbufDoubleboi.h"
+#include "imgui/imgui.h"
 
-TestPlane::TestPlane(Graphics& gfx, float size)
+TestCube::TestCube(Graphics& gfx, float size) 
 {
 	using namespace Bind;
 	namespace dx = DirectX;
-
-	auto model = Plane::Make();
-	model.Transform(dx::XMMatrixScaling(size, size, 1.0f));
-	const auto geometryTag = "$plane." + std::to_string(size);
+	auto model = Cube::MakeIndependentTextured();
+	model.Transform(dx::XMMatrixScaling(size, size, size));
+	model.SetNormalsIndependentFlat();
+	const auto geometryTag = "$cube." + std::to_string(size);
 	AddBind(VertexBuffer::Resolve(gfx, geometryTag, model.vertices));
 	AddBind(IndexBuffer::Resolve(gfx, geometryTag, model.indices));
 
@@ -22,7 +22,7 @@ TestPlane::TestPlane(Graphics& gfx, float size)
 	auto pvsbc = pvs->GetBytecode();
 	AddBind(std::move(pvs));
 
-	AddBind(PixelShader::Resolve(gfx, "PhongPSNormalMapObject.cso"));
+	AddBind(PixelShader::Resolve(gfx, "PhongPSNormalMap.cso"));
 
 	AddBind(PixelConstantBuffer<PSMaterialConstant>::Resolve(gfx, pmc, 1u));
 
@@ -33,32 +33,32 @@ TestPlane::TestPlane(Graphics& gfx, float size)
 	AddBind(std::make_shared<TransformCbufDoubleboi>(gfx, *this, 0u, 2u));
 }
 
-void TestPlane::SetPos(DirectX::XMFLOAT3 pos) noexcept
+void TestCube::SetPos(DirectX::XMFLOAT3 pos) noexcept
 {
 	this->pos = pos;
 }
 
-void TestPlane::SetRotation(float roll, float pitch, float yaw) noexcept
+void TestCube::SetRotation(float roll, float pitch, float yaw) noexcept
 {
 	this->roll = roll;
 	this->pitch = pitch;
 	this->yaw = yaw;
 }
 
-DirectX::XMMATRIX TestPlane::GetTransformXM() const noexcept
+DirectX::XMMATRIX TestCube::GetTransformXM() const noexcept
 {
 	return DirectX::XMMatrixRotationRollPitchYaw(roll, pitch, yaw) *
 		DirectX::XMMatrixTranslation(pos.x, pos.y, pos.z);
 }
 
-void TestPlane::SpawnControlWindow(Graphics& gfx) noexcept
+void TestCube::SpawnControlWindow(Graphics& gfx) noexcept
 {
-	if (ImGui::Begin("Plane"))
+	if (ImGui::Begin("Cube"))
 	{
 		ImGui::Text("Position");
 		ImGui::SliderFloat("X", &pos.x, -80.0f, 80.0f, "%.1f");
-		ImGui::SliderFloat("Y", &pos.x, -80.0f, 80.0f, "%.1f");
-		ImGui::SliderFloat("Z", &pos.x, -80.0f, 80.0f, "%.1f");
+		ImGui::SliderFloat("Y", &pos.y, -80.0f, 80.0f, "%.1f");
+		ImGui::SliderFloat("Z", &pos.z, -80.0f, 80.0f, "%.1f");
 		ImGui::Text("Orientation");
 		ImGui::SliderAngle("Roll", &roll, -180.0f, 180.0f);
 		ImGui::SliderAngle("Pitch", &pitch, -180.0f, 180.0f);

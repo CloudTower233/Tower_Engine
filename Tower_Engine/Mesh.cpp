@@ -1,8 +1,8 @@
 #include "Mesh.h"
 #include "imgui/imgui.h"
+#include "Surface.h"
 #include <unordered_map>
 #include <sstream>
-#include "Surface.h"
 
 namespace dx = DirectX;
 
@@ -23,13 +23,14 @@ const char* ModelException::what() const noexcept
 
 const char* ModelException::GetType() const noexcept
 {
-	return "Model Exception";
+	return "Chili Model Exception";
 }
 
 const std::string& ModelException::GetNote() const noexcept
 {
 	return note;
 }
+
 // Mesh
 Mesh::Mesh(Graphics& gfx, std::vector<std::shared_ptr<Bind::Bindable>> bindPtrs)
 {
@@ -54,15 +55,16 @@ DirectX::XMMATRIX Mesh::GetTransformXM() const noexcept
 
 
 // Node
-Node::Node(int id,const std::string& name,std::vector<Mesh*> meshPtrs, const DirectX::XMMATRIX& transform_in) noxnd
+Node::Node(int id, const std::string& name, std::vector<Mesh*> meshPtrs, const DirectX::XMMATRIX& transform_in) noxnd
 	:
-	id(id),
-	meshPtrs(std::move(meshPtrs)),
-	name(name)
+id(id),
+meshPtrs(std::move(meshPtrs)),
+name(name)
 {
 	dx::XMStoreFloat4x4(&transform, transform_in);
 	dx::XMStoreFloat4x4(&appliedTransform, dx::XMMatrixIdentity());
 }
+
 void Node::Draw(Graphics& gfx, DirectX::FXMMATRIX accumulatedTransform) const noxnd
 {
 	const auto built =
@@ -78,6 +80,7 @@ void Node::Draw(Graphics& gfx, DirectX::FXMMATRIX accumulatedTransform) const no
 		pc->Draw(gfx, built);
 	}
 }
+
 void Node::AddChild(std::unique_ptr<Node> pChild) noxnd
 {
 	assert(pChild);
@@ -92,7 +95,6 @@ void Node::ShowTree(Node*& pSelectedNode) const noexcept
 	const auto node_flags = ImGuiTreeNodeFlags_OpenOnArrow
 		| ((GetId() == selectedId) ? ImGuiTreeNodeFlags_Selected : 0)
 		| ((childPtrs.size() == 0) ? ImGuiTreeNodeFlags_Leaf : 0);
-
 	// render this node
 	const auto expanded = ImGui::TreeNodeEx(
 		(void*)(intptr_t)GetId(), node_flags, name.c_str()
@@ -115,7 +117,7 @@ void Node::ShowTree(Node*& pSelectedNode) const noexcept
 
 void Node::SetAppliedTransform(DirectX::FXMMATRIX transform) noexcept
 {
-	dx::XMStoreFloat4x4(&appliedTransform,transform);
+	dx::XMStoreFloat4x4(&appliedTransform, transform);
 }
 
 int Node::GetId() const noexcept
@@ -123,12 +125,14 @@ int Node::GetId() const noexcept
 	return id;
 }
 
+
 // Model
-class ModelWindow
+class ModelWindow // pImpl idiom, only defined in this .cpp
 {
 public:
 	void Show(const char* windowName, const Node& root) noexcept
 	{
+		// window name defaults to "Model"
 		windowName = windowName ? windowName : "Model";
 		// need an ints to track node indices and selected node
 		int nodeIndexTracker = 0;
@@ -136,8 +140,8 @@ public:
 		{
 			ImGui::Columns(2, nullptr, true);
 			root.ShowTree(pSelectedNode);
-			ImGui::NextColumn();
 
+			ImGui::NextColumn();
 			if (pSelectedNode != nullptr)
 			{
 				auto& transform = transforms[pSelectedNode->GetId()];
@@ -157,7 +161,6 @@ public:
 	{
 		assert(pSelectedNode != nullptr);
 		const auto& transform = transforms.at(pSelectedNode->GetId());
-
 		return
 			dx::XMMatrixRotationRollPitchYaw(transform.roll, transform.pitch, transform.yaw) *
 			dx::XMMatrixTranslation(transform.x, transform.y, transform.z);
@@ -179,6 +182,7 @@ private:
 	};
 	std::unordered_map<int, TransformParameters> transforms;
 };
+
 Model::Model(Graphics& gfx, const std::string fileName)
 	:
 	pWindow(std::make_unique<ModelWindow>())
@@ -188,7 +192,8 @@ Model::Model(Graphics& gfx, const std::string fileName)
 		aiProcess_Triangulate |
 		aiProcess_JoinIdenticalVertices |
 		aiProcess_ConvertToLeftHanded |
-		aiProcess_GenNormals
+		aiProcess_GenNormals |
+		aiProcess_CalcTangentSpace
 	);
 
 	if (pScene == nullptr)
@@ -198,11 +203,11 @@ Model::Model(Graphics& gfx, const std::string fileName)
 
 	for (size_t i = 0; i < pScene->mNumMeshes; i++)
 	{
-		meshPtrs.push_back(ParseMesh(gfx, *pScene->mMeshes[i],pScene->mMaterials));
+		meshPtrs.push_back(ParseMesh(gfx, *pScene->mMeshes[i], pScene->mMaterials));
 	}
 
 	int nextId = 0;
-	pRoot = ParseNode(nextId,*pScene->mRootNode);
+	pRoot = ParseNode(nextId, *pScene->mRootNode);
 }
 
 void Model::Draw(Graphics& gfx) const noxnd
@@ -219,6 +224,11 @@ void Model::ShowWindow(const char* windowName) noexcept
 	pWindow->Show(windowName, *pRoot);
 }
 
+void Model::SetRootTransform(DirectX::FXMMATRIX tf) noexcept
+{
+	pRoot->SetAppliedTransform(tf);
+}
+
 Model::~Model() noexcept
 {}
 
@@ -231,6 +241,8 @@ std::unique_ptr<Mesh> Model::ParseMesh(Graphics& gfx, const aiMesh& mesh, const 
 		VertexLayout{}
 		.Append(VertexLayout::Position3D)
 		.Append(VertexLayout::Normal)
+		.Append(VertexLayout::Tangent)
+		.Append(VertexLayout::Bitangent)
 		.Append(VertexLayout::Texture2D)
 	));
 
@@ -239,6 +251,8 @@ std::unique_ptr<Mesh> Model::ParseMesh(Graphics& gfx, const aiMesh& mesh, const 
 		vbuf.EmplaceBack(
 			*reinterpret_cast<dx::XMFLOAT3*>(&mesh.mVertices[i]),
 			*reinterpret_cast<dx::XMFLOAT3*>(&mesh.mNormals[i]),
+			*reinterpret_cast<dx::XMFLOAT3*>(&mesh.mTangents[i]),
+			*reinterpret_cast<dx::XMFLOAT3*>(&mesh.mBitangents[i]),
 			*reinterpret_cast<dx::XMFLOAT2*>(&mesh.mTextureCoords[0][i])
 		);
 	}
@@ -257,11 +271,10 @@ std::unique_ptr<Mesh> Model::ParseMesh(Graphics& gfx, const aiMesh& mesh, const 
 	std::vector<std::shared_ptr<Bindable>> bindablePtrs;
 
 	using namespace std::string_literals;
-	const auto base = "Models\\nano_textured\\"s;
+	const auto base = "Models\\brick_wall\\"s;
 
 	bool hasSpecularMap = false;
 	float shininess = 35.0f;
-
 	if (mesh.mMaterialIndex >= 0)
 	{
 		auto& material = *pMaterials[mesh.mMaterialIndex];
@@ -270,7 +283,7 @@ std::unique_ptr<Mesh> Model::ParseMesh(Graphics& gfx, const aiMesh& mesh, const 
 
 		material.GetTexture(aiTextureType_DIFFUSE, 0, &texFileName);
 		bindablePtrs.push_back(Texture::Resolve(gfx, base + texFileName.C_Str()));
-		
+
 		if (material.GetTexture(aiTextureType_SPECULAR, 0, &texFileName) == aiReturn_SUCCESS)
 		{
 			bindablePtrs.push_back(Texture::Resolve(gfx, base + texFileName.C_Str(), 1));
@@ -280,6 +293,10 @@ std::unique_ptr<Mesh> Model::ParseMesh(Graphics& gfx, const aiMesh& mesh, const 
 		{
 			material.Get(AI_MATKEY_SHININESS, shininess);
 		}
+
+		material.GetTexture(aiTextureType_NORMALS, 0, &texFileName);
+		bindablePtrs.push_back(Texture::Resolve(gfx, base + texFileName.C_Str(), 2));
+
 		bindablePtrs.push_back(Bind::Sampler::Resolve(gfx));
 	}
 
@@ -287,10 +304,9 @@ std::unique_ptr<Mesh> Model::ParseMesh(Graphics& gfx, const aiMesh& mesh, const 
 
 	bindablePtrs.push_back(VertexBuffer::Resolve(gfx, meshTag, vbuf));
 
-
 	bindablePtrs.push_back(IndexBuffer::Resolve(gfx, meshTag, indices));
 
-	auto pvs = VertexShader::Resolve(gfx, "PhongVS.cso");
+	auto pvs = VertexShader::Resolve(gfx, "PhongVSNormalMap.cso");
 	auto pvsbc = pvs->GetBytecode();
 	bindablePtrs.push_back(std::move(pvs));
 
@@ -298,17 +314,26 @@ std::unique_ptr<Mesh> Model::ParseMesh(Graphics& gfx, const aiMesh& mesh, const 
 
 	if (hasSpecularMap)
 	{
-		bindablePtrs.push_back(PixelShader::Resolve(gfx, "PhongPSSpecMap.cso"));
-	}
-	else
-	{
-		bindablePtrs.push_back(PixelShader::Resolve(gfx, "PhongPS.cso"));
+		bindablePtrs.push_back(PixelShader::Resolve(gfx, "PhongPSSpecNormalMap.cso"));
 
 		struct PSMaterialConstant
 		{
-			float specularIntensity = 0.8f;
+			BOOL  normalMapEnabled = TRUE;
+			float padding[3];
+		} pmc;
+
+		bindablePtrs.push_back(PixelConstantBuffer<PSMaterialConstant>::Resolve(gfx, pmc, 1u));
+	}
+	else
+	{
+		bindablePtrs.push_back(PixelShader::Resolve(gfx, "PhongPSNormalMap.cso"));
+
+		struct PSMaterialConstant
+		{
+			float specularIntensity = 0.18f;
 			float specularPower;
-			float padding[2];
+			BOOL  normalMapEnabled = TRUE;
+			float padding[1];
 		} pmc;
 		pmc.specularPower = shininess;
 		// this is CLEARLY an issue... all meshes will share same mat const, but may have different
@@ -318,7 +343,8 @@ std::unique_ptr<Mesh> Model::ParseMesh(Graphics& gfx, const aiMesh& mesh, const 
 
 	return std::make_unique<Mesh>(gfx, std::move(bindablePtrs));
 }
-std::unique_ptr<Node> Model::ParseNode(int& nextId,const aiNode& node) noexcept
+
+std::unique_ptr<Node> Model::ParseNode(int& nextId, const aiNode& node) noexcept
 {
 	namespace dx = DirectX;
 	const auto transform = dx::XMMatrixTranspose(dx::XMLoadFloat4x4(
@@ -333,10 +359,10 @@ std::unique_ptr<Node> Model::ParseNode(int& nextId,const aiNode& node) noexcept
 		curMeshPtrs.push_back(meshPtrs.at(meshIdx).get());
 	}
 
-	auto pNode = std::make_unique<Node>(nextId++,node.mName.C_Str(),std::move(curMeshPtrs), transform);
+	auto pNode = std::make_unique<Node>(nextId++, node.mName.C_Str(), std::move(curMeshPtrs), transform);
 	for (size_t i = 0; i < node.mNumChildren; i++)
 	{
-		pNode->AddChild(ParseNode(nextId,*node.mChildren[i]));
+		pNode->AddChild(ParseNode(nextId, *node.mChildren[i]));
 	}
 
 	return pNode;
