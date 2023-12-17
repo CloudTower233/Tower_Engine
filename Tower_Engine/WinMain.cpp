@@ -13,7 +13,7 @@ int CALLBACK WinMain(
 {
 	try 
 	{
-		return App{}.Go();
+		return App{ lpCmdLine }.Go();
 	}
 	catch(const MyException& e){
 		MessageBox(nullptr, e.what(), e.GetType(), MB_OK | MB_ICONEXCLAMATION);
