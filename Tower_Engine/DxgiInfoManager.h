@@ -1,9 +1,9 @@
 #pragma once
 #include "MyWin.h"
+#include "WRL.h"
 #include <vector>
-#include <string>
-#include <wrl.h>
 #include <dxgidebug.h>
+#include <string>
 
 class DxgiInfoManager
 {

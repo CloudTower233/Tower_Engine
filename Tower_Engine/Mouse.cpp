@@ -1,5 +1,6 @@
-#include "Mouse.h"
 #include "MyWin.h"
+#include "Mouse.h"
+
 
 std::pair<int, int> Mouse::GetPos() const noexcept
 {
@@ -16,6 +17,7 @@ std::optional<Mouse::RawDelta> Mouse::ReadRawDelta() noexcept
 	rawDeltaBuffer.pop();
 	return d;
 }
+
 int Mouse::GetPosX() const noexcept
 {
 	return x;
@@ -41,8 +43,7 @@ bool Mouse::RightIsPressed() const noexcept
 	return rightIsPressed;
 }
 
-
-Mouse::Event Mouse::Read() noexcept
+std::optional<Mouse::Event> Mouse::Read() noexcept
 {
 	if (buffer.size() > 0u)
 	{
@@ -50,7 +51,7 @@ Mouse::Event Mouse::Read() noexcept
 		buffer.pop();
 		return e;
 	}
-	return Mouse::Event();
+	return {};
 }
 
 void Mouse::Flush() noexcept
@@ -77,6 +78,7 @@ void Mouse::OnMouseMove(int newx, int newy) noexcept
 {
 	x = newx;
 	y = newy;
+
 	buffer.push(Mouse::Event(Mouse::Event::Type::Move, *this));
 	TrimBuffer();
 }
@@ -95,7 +97,7 @@ void Mouse::OnMouseEnter() noexcept
 	TrimBuffer();
 }
 
-void Mouse::onRawDelta(int dx, int dy) noexcept
+void Mouse::OnRawDelta(int dx, int dy) noexcept
 {
 	rawDeltaBuffer.push({ dx,dy });
 	TrimBuffer();
@@ -160,9 +162,11 @@ void Mouse::TrimRawInputBuffer() noexcept
 		rawDeltaBuffer.pop();
 	}
 }
+
 void Mouse::OnWheelDelta(int x, int y, int delta) noexcept
 {
 	wheelDeltaCarry += delta;
+	// generate events for every 120 
 	while (wheelDeltaCarry >= WHEEL_DELTA)
 	{
 		wheelDeltaCarry -= WHEEL_DELTA;

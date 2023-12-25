@@ -74,7 +74,6 @@ namespace Dvtx
 	{
 		return SizeOf(type);
 	}
-
 	VertexLayout::ElementType VertexLayout::Element::GetType() const noexcept
 	{
 		return type;
@@ -136,7 +135,7 @@ namespace Dvtx
 
 
 	// VertexBuffer
-	VertexBuffer::VertexBuffer(VertexLayout layout,size_t size) noxnd
+	VertexBuffer::VertexBuffer(VertexLayout layout, size_t size) noxnd
 		:
 	layout(std::move(layout))
 	{

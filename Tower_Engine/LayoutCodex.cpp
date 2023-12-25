@@ -1,5 +1,6 @@
 #include "LayoutCodex.h"
 
+
 namespace Dcb
 {
 	Dcb::CookedLayout LayoutCodex::Resolve(Dcb::RawLayout&& layout) noxnd
@@ -7,8 +8,8 @@ namespace Dcb
 		auto sig = layout.GetSignature();
 		auto& map = Get_().map;
 		const auto i = map.find(sig);
-		//identical layout already exists
-		if (i != map.end()) 
+		// idential layout already exists
+		if (i != map.end())
 		{
 			// input layout is expected to be cleared after Resolve
 			// so just throw away the layout tree

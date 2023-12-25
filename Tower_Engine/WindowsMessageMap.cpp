@@ -1,10 +1,10 @@
 #include "WindowsMessageMap.h"
-#include <Windows.h>
 #include <string>
 #include <sstream>
 #include <iomanip>
 
-#define WM_UAHDESTORYWINDOW 0x0090
+// secret messages
+#define WM_UAHDESTROYWINDOW 0x0090
 #define WM_UAHDRAWMENU 0x0091
 #define WM_UAHDRAWMENUITEM 0x0092
 #define WM_UAHINITMENU 0x0093
@@ -13,7 +13,7 @@
 
 #define REGISTER_MESSAGE(msg){msg,#msg}
 
-WindowsMessageMap::WindowsMessageMap()
+WindowsMessageMap::WindowsMessageMap() noexcept
 	:
 	map({
 		REGISTER_MESSAGE(WM_CREATE),
@@ -28,7 +28,6 @@ WindowsMessageMap::WindowsMessageMap()
 		REGISTER_MESSAGE(WM_SETTEXT),
 		REGISTER_MESSAGE(WM_GETTEXT),
 		REGISTER_MESSAGE(WM_GETTEXTLENGTH),
-		REGISTER_MESSAGE(WM_KILLFOCUS),
 		REGISTER_MESSAGE(WM_PAINT),
 		REGISTER_MESSAGE(WM_CLOSE),
 		REGISTER_MESSAGE(WM_QUERYENDSESSION),
@@ -65,8 +64,8 @@ WindowsMessageMap::WindowsMessageMap()
 		REGISTER_MESSAGE(WM_DELETEITEM),
 		REGISTER_MESSAGE(WM_VKEYTOITEM),
 		REGISTER_MESSAGE(WM_CHARTOITEM),
-		REGISTER_MESSAGE(WM_GETFONT),
 		REGISTER_MESSAGE(WM_SETFONT),
+		REGISTER_MESSAGE(WM_GETFONT),
 		REGISTER_MESSAGE(WM_QUERYDRAGICON),
 		REGISTER_MESSAGE(WM_COMPAREITEM),
 		REGISTER_MESSAGE(WM_COMPACTING),
@@ -185,19 +184,19 @@ WindowsMessageMap::WindowsMessageMap()
 		REGISTER_MESSAGE(WM_IME_NOTIFY),
 		REGISTER_MESSAGE(WM_NCMOUSELEAVE),
 		REGISTER_MESSAGE(WM_EXITSIZEMOVE),
-		REGISTER_MESSAGE(WM_UAHDESTORYWINDOW),
+		REGISTER_MESSAGE(WM_UAHDESTROYWINDOW),
 		REGISTER_MESSAGE(WM_DWMNCRENDERINGCHANGED),
 		REGISTER_MESSAGE(WM_ENTERSIZEMOVE),
 		})
 {}
 
-std::string WindowsMessageMap::operator()(DWORD msg, LPARAM lp, WPARAM wp) const
+std::string WindowsMessageMap::operator()(DWORD msg, LPARAM lp, WPARAM wp) const noexcept
 {
 	constexpr int firstColWidth = 25;
 	const auto i = map.find(msg);
 
 	std::ostringstream oss;
-	if (i != map.end()) 
+	if (i != map.end())
 	{
 		oss << std::left << std::setw(firstColWidth) << i->second << std::right;
 	}
@@ -207,8 +206,8 @@ std::string WindowsMessageMap::operator()(DWORD msg, LPARAM lp, WPARAM wp) const
 		padss << "Unknown message: 0x" << std::hex << msg;
 		oss << std::left << std::setw(firstColWidth) << padss.str() << std::right;
 	}
-	oss << "   LP:0x" << std::hex << std::setfill('0') << std::setw(8) << lp;
-	oss << "   WP:0x" << std::hex << std::setfill('0') << std::setw(8) << wp << std::endl;
+	oss << "   LP: 0x" << std::hex << std::setfill('0') << std::setw(8) << lp;
+	oss << "   WP: 0x" << std::hex << std::setfill('0') << std::setw(8) << wp << std::endl;
 
 	return oss.str();
 }

@@ -28,9 +28,9 @@ namespace Dvtx
 	public:
 		enum ElementType
 		{
-			#define X(el) el,
+#define X(el) el,
 			LAYOUT_ELEMENT_TYPES
-			#undef X
+#undef X
 		};
 
 		template<ElementType> struct Map;
@@ -115,17 +115,17 @@ namespace Dvtx
 			DVTX_ELEMENT_AI_EXTRACTOR(mFaces)
 		};
 
-		template<template<VertexLayout::ElementType> class F,typename... Args>
-		static constexpr auto Bridge( VertexLayout::ElementType type,Args&&... args) noxnd
+		template<template<VertexLayout::ElementType> class F, typename... Args>
+		static constexpr auto Bridge(VertexLayout::ElementType type, Args&&... args) noxnd
 		{
-			switch( type )
+			switch (type)
 			{
-				#define X(el) case VertexLayout::el: return F<VertexLayout::el>::Exec( std::forward<Args>( args )... );
+#define X(el) case VertexLayout::el: return F<VertexLayout::el>::Exec( std::forward<Args>( args )... );
 				LAYOUT_ELEMENT_TYPES
-				#undef X
+#undef X
 			}
-			assert( "Invalid element type" && false );
-			return F<VertexLayout::Count>::Exec( std::forward<Args>( args )... );
+			assert("Invalid element type" && false);
+			return F<VertexLayout::Count>::Exec(std::forward<Args>(args)...);
 		}
 
 		class Element
@@ -243,7 +243,7 @@ namespace Dvtx
 	class VertexBuffer
 	{
 	public:
-		VertexBuffer(VertexLayout layout,size_t size = 0u) noxnd;
+		VertexBuffer(VertexLayout layout, size_t size = 0u) noxnd;
 		VertexBuffer(VertexLayout layout, const aiMesh& mesh);
 		const char* GetData() const noxnd;
 		const VertexLayout& GetLayout() const noexcept;

@@ -1,12 +1,26 @@
 #include "Camera.h"
 #include "imgui/imgui.h"
 #include "MyMath.h"
+#include "Graphics.h"
 
 namespace dx = DirectX;
 
-Camera::Camera() noexcept
+Camera::Camera(Graphics& gfx, std::string name, DirectX::XMFLOAT3 homePos, float homePitch, float homeYaw) noexcept
+	:
+	name(std::move(name)),
+	homePos(homePos),
+	homePitch(homePitch),
+	homeYaw(homeYaw),
+	proj(gfx, 1.0f, 9.0f / 16.0f, 0.5f, 400.0f),
+	indicator(gfx)
 {
-	Reset();
+	Reset(gfx);
+}
+
+void Camera::BindToGraphics(Graphics& gfx) const
+{
+	gfx.SetCamera(GetMatrix());
+	gfx.SetProjection(proj.GetMatrix());
 }
 
 DirectX::XMMATRIX Camera::GetMatrix() const noexcept
@@ -26,36 +40,60 @@ DirectX::XMMATRIX Camera::GetMatrix() const noexcept
 	return XMMatrixLookAtLH(camPosition, camTarget, XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
 }
 
-void Camera::SpawnControlWindow() noexcept
+void Camera::SpawnControlWidgets(Graphics& gfx) noexcept
 {
-	if (ImGui::Begin("Camera"))
+	bool rotDirty = false;
+	bool posDirty = false;
+	const auto dcheck = [](bool d, bool& carry) { carry = carry || d; };
+	ImGui::Text("Position");
+	dcheck(ImGui::SliderFloat("X", &pos.x, -80.0f, 80.0f, "%.1f"), posDirty);
+	dcheck(ImGui::SliderFloat("Y", &pos.y, -80.0f, 80.0f, "%.1f"), posDirty);
+	dcheck(ImGui::SliderFloat("Z", &pos.z, -80.0f, 80.0f, "%.1f"), posDirty);
+	ImGui::Text("Orientation");
+	dcheck(ImGui::SliderAngle("Pitch", &pitch, 0.995f * -90.0f, 0.995f * 90.0f), rotDirty);
+	dcheck(ImGui::SliderAngle("Yaw", &yaw, -180.0f, 180.0f), rotDirty);
+	proj.RenderWidgets(gfx);
+	ImGui::Checkbox("Camera Indicator", &enableCameraIndicator);
+	ImGui::Checkbox("Frustum Indicator", &enableFrustumIndicator);
+	if (ImGui::Button("Reset"))
 	{
-		ImGui::Text("Position");
-		ImGui::SliderFloat("X", &pos.x, -80.0f, 80.0f, "%.1f");
-		ImGui::SliderFloat("Y", &pos.y, -80.0f, 80.0f, "%.1f");
-		ImGui::SliderFloat("Z", &pos.z, -80.0f, 80.0f, "%.1f");
-		ImGui::Text("Orientation");
-		ImGui::SliderAngle("Pitch", &pitch, 0.995f * -90.0f, 0.995f * 90.0f);
-		ImGui::SliderAngle("Yaw", &yaw, -180.0f, 180.0f);
-		if (ImGui::Button("Reset"))
-		{
-			Reset();
-		}
+		Reset(gfx);
 	}
-	ImGui::End();
+
+	if (rotDirty)
+	{
+		const dx::XMFLOAT3 angles = { pitch,yaw,0.0f };
+		indicator.SetRotation(angles);
+		proj.SetRotation(angles);
+	}
+	if (posDirty)
+	{
+		indicator.SetPos(pos);
+		proj.SetPos(pos);
+	}
 }
 
-void Camera::Reset() noexcept
+void Camera::Reset(Graphics& gfx) noexcept
 {
-	pos = { -13.5f,6.0f,3.5f };
-	pitch = 0.0f;
-	yaw = PI / 2.0f;
+	pos = homePos;
+	pitch = homePitch;
+	yaw = homeYaw;
+
+	indicator.SetPos(pos);
+	proj.SetPos(pos);
+	const dx::XMFLOAT3 angles = { pitch,yaw,0.0f };
+	indicator.SetRotation(angles);
+	proj.SetRotation(angles);
+	proj.Reset(gfx);
 }
 
 void Camera::Rotate(float dx, float dy) noexcept
 {
 	yaw = wrap_angle(yaw + dx * rotationSpeed);
-	pitch = std::clamp(pitch + dy * rotationSpeed,0.995f * -PI / 2.0f,0.995f * PI / 2.0f);
+	pitch = std::clamp(pitch + dy * rotationSpeed, 0.995f * -PI / 2.0f, 0.995f * PI / 2.0f);
+	const dx::XMFLOAT3 angles = { pitch,yaw,0.0f };
+	indicator.SetRotation(angles);
+	proj.SetRotation(angles);
 }
 
 void Camera::Translate(DirectX::XMFLOAT3 translation) noexcept
@@ -70,9 +108,34 @@ void Camera::Translate(DirectX::XMFLOAT3 translation) noexcept
 		pos.y + translation.y,
 		pos.z + translation.z
 	};
+	indicator.SetPos(pos);
+	proj.SetPos(pos);
 }
 
 DirectX::XMFLOAT3 Camera::GetPos() const noexcept
 {
 	return pos;
+}
+
+const std::string& Camera::GetName() const noexcept
+{
+	return name;
+}
+
+void Camera::LinkTechniques(Rgph::RenderGraph& rg)
+{
+	indicator.LinkTechniques(rg);
+	proj.LinkTechniques(rg);
+}
+
+void Camera::Submit() const
+{
+	if (enableCameraIndicator)
+	{
+		indicator.Submit();
+	}
+	if (enableFrustumIndicator)
+	{
+		proj.Submit();
+	}
 }

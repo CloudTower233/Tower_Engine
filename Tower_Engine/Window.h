@@ -3,10 +3,10 @@
 #include "MyException.h"
 #include "Keyboard.h"
 #include "Mouse.h"
-#include <optional>
 #include "Graphics.h"
+#include <optional>
 #include <memory>
-#include "WindowsThrowMacros.h"
+
 
 class Window
 {
@@ -21,8 +21,8 @@ public:
 	{
 	public:
 		HrException(int line, const char* file, HRESULT hr) noexcept;
-		const char* what() const noexcept override;	
-		const char* GetType() const noexcept;
+		const char* what() const noexcept override;
+		const char* GetType() const noexcept override;
 		HRESULT GetErrorCode() const noexcept;
 		std::string GetErrorDescription() const noexcept;
 	private:
@@ -35,6 +35,7 @@ public:
 		const char* GetType() const noexcept override;
 	};
 private:
+	// singleton manages registration/cleanup of window class
 	class WindowClass
 	{
 	public:
@@ -45,7 +46,7 @@ private:
 		~WindowClass();
 		WindowClass(const WindowClass&) = delete;
 		WindowClass& operator=(const WindowClass&) = delete;
-		static constexpr const char* wndClassName = "Direct3D Engine";
+		static constexpr const char* wndClassName = "Chili Direct3D Engine Window";
 		static WindowClass wndClass;
 		HINSTANCE hInst;
 	};
@@ -54,7 +55,7 @@ public:
 	~Window();
 	Window(const Window&) = delete;
 	Window& operator=(const Window&) = delete;
-	void SetTitle(const std::string& Title);
+	void SetTitle(const std::string& title);
 	void EnableCursor() noexcept;
 	void DisableCursor() noexcept;
 	bool CursorEnabled() const noexcept;
@@ -63,8 +64,8 @@ public:
 private:
 	void ConfineCursor() noexcept;
 	void FreeCursor() noexcept;
-	void HideCursor() noexcept;
 	void ShowCursor() noexcept;
+	void HideCursor() noexcept;
 	void EnableImGuiMouse() noexcept;
 	void DisableImGuiMouse() noexcept;
 	static LRESULT CALLBACK HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept;

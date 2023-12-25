@@ -8,7 +8,6 @@
 
 #pragma comment(lib, "dxguid.lib")
 
-#define GFX_THROW_NOINFO(hrcall) if( FAILED( hr = (hrcall) ) ) throw Graphics::HrException( __LINE__,__FILE__,hr )
 
 DxgiInfoManager::DxgiInfoManager()
 {
@@ -37,6 +36,8 @@ DxgiInfoManager::DxgiInfoManager()
 
 void DxgiInfoManager::Set() noexcept
 {
+	// set the index (next) so that the next all to GetMessages()
+	// will only get errors generated after this call
 	next = pDxgiInfoQueue->GetNumStoredMessages(DXGI_DEBUG_ALL);
 }
 

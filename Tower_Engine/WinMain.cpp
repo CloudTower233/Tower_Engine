@@ -1,7 +1,3 @@
-#include <string>
-#include "WindowsMessageMap.h"
-#include <sstream>
-#include "Window.h"
 #include "App.h"
 
 
@@ -9,13 +5,14 @@ int CALLBACK WinMain(
 	HINSTANCE hInstance,
 	HINSTANCE hPrevInstance,
 	LPSTR     lpCmdLine,
-	int		  nCmdShow)
+	int       nCmdShow)
 {
-	try 
+	try
 	{
 		return App{ lpCmdLine }.Go();
 	}
-	catch(const MyException& e){
+	catch (const MyException& e)
+	{
 		MessageBox(nullptr, e.what(), e.GetType(), MB_OK | MB_ICONEXCLAMATION);
 	}
 	catch (const std::exception& e)
@@ -27,5 +24,4 @@ int CALLBACK WinMain(
 		MessageBox(nullptr, "No details available", "Unknown Exception", MB_OK | MB_ICONEXCLAMATION);
 	}
 	return -1;
-
 }

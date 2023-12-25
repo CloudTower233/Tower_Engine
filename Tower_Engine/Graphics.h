@@ -2,7 +2,7 @@
 #include "MyWin.h"
 #include "MyException.h"
 #include <d3d11.h>
-#include <wrl.h>
+#include "WRL.h"
 #include <vector>
 #include "DxgiInfoManager.h"
 #include <d3dcompiler.h>
@@ -14,11 +14,12 @@
 namespace Bind
 {
 	class Bindable;
+	class RenderTarget;
 }
 
 class Graphics
 {
-	friend Bind::Bindable;
+	friend class GraphicsResource;
 public:
 	class Exception : public MyException
 	{
@@ -57,7 +58,7 @@ public:
 		std::string reason;
 	};
 public:
-	Graphics(HWND hWnd,int width,int height);
+	Graphics(HWND hWnd, int width, int height);
 	Graphics(const Graphics&) = delete;
 	Graphics& operator=(const Graphics&) = delete;
 	~Graphics();
@@ -71,7 +72,12 @@ public:
 	void EnableImgui() noexcept;
 	void DisableImgui() noexcept;
 	bool IsImguiEnabled() const noexcept;
+	UINT GetWidth() const noexcept;
+	UINT GetHeight() const noexcept;
+	std::shared_ptr<Bind::RenderTarget> GetTarget();
 private:
+	UINT width;
+	UINT height;
 	DirectX::XMMATRIX projection;
 	DirectX::XMMATRIX camera;
 	bool imguiEnabled = true;
@@ -81,6 +87,5 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Device> pDevice;
 	Microsoft::WRL::ComPtr<IDXGISwapChain> pSwap;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> pContext;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> pTarget;
-	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> pDSV;
+	std::shared_ptr<Bind::RenderTarget> pTarget;
 };

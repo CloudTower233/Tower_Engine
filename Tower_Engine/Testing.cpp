@@ -1,6 +1,8 @@
 #include "DynamicConstant.h"
 #include "LayoutCodex.h"
 #include "Vertex.h"
+#include "Graphics.h"
+#include "Window.h"
 #include <cstring>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -9,6 +11,11 @@
 #include "Mesh.h"
 #include "Testing.h"
 #include "XM.h"
+#include <algorithm>
+#include <array>
+#include "BindableCommon.h"
+#include "RenderTarget.h"
+#include "Surface.h"
 
 namespace dx = DirectX;
 
@@ -189,6 +196,16 @@ void TestDynamicConstant()
 		auto act = b.GetSizeInBytes();
 		assert(act == 16u * 4u * 4u * 6u);
 	}
+	// size test array of floats
+	{
+		Dcb::RawLayout s;
+		s.Add<Dcb::Array>("arr");
+		s["arr"].Set<Dcb::Float>(16);
+		auto b = Dcb::Buffer(std::move(s));
+
+		auto act = b.GetSizeInBytes();
+		assert(act == 256u);
+	}
 	// size test array of structs with padding
 	{
 		Dcb::RawLayout s;
@@ -285,4 +302,83 @@ void TestDynamicConstant()
 		auto buf = Dcb::Buffer(std::move(lay));
 		assert(buf.GetSizeInBytes() == 32u);
 	}
+	// specific testing scenario (array packing issues gimme a tissue)
+	{
+		const int maxRadius = 7;
+		const int nCoef = maxRadius * 2 + 1;
+		Dcb::RawLayout l;
+		l.Add<Dcb::Integer>("nTaps");
+		l.Add<Dcb::Array>("coefficients");
+		l["coefficients"].Set<Dcb::Float>(nCoef);
+		Dcb::Buffer buf{ std::move(l) };
+		// assert proper amount of memory allocated
+		assert(buf.GetSizeInBytes() == (nCoef + 1) * 4 * 4);
+		// assert array empty
+		{
+			const char* begin = reinterpret_cast<char*>((int*)&buf["nTaps"]);
+			assert(std::all_of(begin, begin + buf.GetSizeInBytes(), [](char c) {return c == 0; }));
+		}
+		// assert sparse float storage
+		{
+			for (int i = 0; i < nCoef; i++)
+			{
+				buf["coefficients"][i] = 6.9f;
+			}
+			const auto begin = reinterpret_cast<std::array<float, 4>*>((float*)&buf["coefficients"][0]);
+			const auto end = begin + nCoef;
+			assert(std::all_of(begin, end, [](const auto& arr)
+				{
+					return arr[0] == 6.9f && arr[1] == 0.0f && arr[2] == 0.0f && arr[3] == 0.0f;
+				}));
+		}
+	}
+}
+
+void D3DTestScratchPad(Window& wnd)
+{
+	namespace dx = DirectX;
+	using namespace Dvtx;
+
+	const auto RenderWithVS = [&gfx = wnd.Gfx()](const std::string& vsName)
+		{
+			const auto bitop = Bind::Topology::Resolve(gfx, D3D11_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			const auto layout = VertexLayout{}
+				.Append(VertexLayout::Position2D)
+				.Append(VertexLayout::Float3Color);
+
+			VertexBuffer vb(layout, 3);
+			vb[0].Attr<VertexLayout::Position2D>() = dx::XMFLOAT2{ 0.0f,0.5f };
+			vb[0].Attr<VertexLayout::Float3Color>() = dx::XMFLOAT3{ 1.0f,0.0f,0.0f };
+			vb[1].Attr<VertexLayout::Position2D>() = dx::XMFLOAT2{ 0.5f,-0.5f };
+			vb[1].Attr<VertexLayout::Float3Color>() = dx::XMFLOAT3{ 0.0f,1.0f,0.0f };
+			vb[2].Attr<VertexLayout::Position2D>() = dx::XMFLOAT2{ -0.5f,-0.5f };
+			vb[2].Attr<VertexLayout::Float3Color>() = dx::XMFLOAT3{ 0.0f,0.0f,1.0f };
+			const auto bivb = Bind::VertexBuffer::Resolve(gfx, "##?", vb);
+
+			const std::vector<unsigned short> idx = { 0,1,2 };
+			const auto biidx = Bind::IndexBuffer::Resolve(gfx, "##?", idx);
+
+			const auto bips = Bind::PixelShader::Resolve(gfx, "Test_PS.cso");
+
+			const auto bivs = Bind::VertexShader::Resolve(gfx, vsName);
+			const auto bilay = Bind::InputLayout::Resolve(gfx, layout, *bivs);
+
+			auto rt = Bind::ShaderInputRenderTarget{ gfx,1280,720,0 };
+
+			biidx->Bind(gfx);
+			bivb->Bind(gfx);
+			bitop->Bind(gfx);
+			bips->Bind(gfx);
+			bivs->Bind(gfx);
+			bilay->Bind(gfx);
+			rt.Clear(gfx, { 0.0f,0.0f,0.0f,1.0f });
+			rt.BindAsBuffer(gfx);
+			gfx.DrawIndexed(biidx->GetCount());
+			gfx.GetTarget()->BindAsBuffer(gfx);
+			rt.ToSurface(gfx).Save("Test_" + vsName + ".png");
+		};
+
+	RenderWithVS("Test2_VS.cso");
+	RenderWithVS("Test1_VS.cso");
 }

@@ -21,7 +21,7 @@ bool Keyboard::KeyIsEmpty() const noexcept
 	return keybuffer.empty();
 }
 
-char Keyboard::ReadChar() noexcept
+std::optional<char> Keyboard::ReadChar() noexcept
 {
 	if (charbuffer.size() > 0u)
 	{
@@ -29,8 +29,7 @@ char Keyboard::ReadChar() noexcept
 		charbuffer.pop();
 		return charcode;
 	}
-	return 0;
-
+	return {};
 }
 
 bool Keyboard::CharIsEmpty() const noexcept
@@ -72,7 +71,7 @@ bool Keyboard::AutorepeatIsEnabled() const noexcept
 void Keyboard::OnKeyPressed(unsigned char keycode) noexcept
 {
 	keystates[keycode] = true;
-	keybuffer.push(Keyboard::Event(Keyboard::Event::Type::Press,keycode));
+	keybuffer.push(Keyboard::Event(Keyboard::Event::Type::Press, keycode));
 	TrimBuffer(keybuffer);
 }
 
